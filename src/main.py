@@ -1,6 +1,6 @@
 import sys
 from os import walk
-from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QAction, QFileDialog, QLabel, QVBoxLayout, QPushButton, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTextEdit, QAction, QFileDialog, QLabel, QVBoxLayout, QPushButton, QWidget, QMessageBox
 from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtCore import Qt
 # from PyQt5.QtWidgets import QApplication, , QPushButton, QHBoxLayout, QVBoxLayout, 
@@ -45,25 +45,37 @@ class MyApp(QMainWindow):
 
     def handlePrevBtn(self):
         idx = self.target
-        work_files = self.work_files
-
         if idx>0:
             self.target = idx-1
         else:
-            self.target = len(work_files)-1
+            pass
         self.showImg()
 
 
     def handleNextBtn(self):
-        print('handleNextBtn')
         idx = self.target
         work_files = self.work_files
 
         if idx<len(work_files)-1:
             self.target = idx+1
         else:
-            self.target = 0
+            pass
+
         self.showImg()
+      
+    def handleSaveBtn(self):
+        import shutil, os
+        emotions = self.emotions
+        for filename in emotions:
+            emotion = emotions[filename]
+            # 경로 존재하는지 확인
+            if not os.path.isdir(self.work_dir + '/' + emotion):
+                os.mkdir(self.work_dir + '/' + emotion)
+            prev_path = self.work_dir + '/' + filename
+            new_path = self.work_dir + '/' + emotion + '/' + filename
+            # print(prev_path,new_path)
+            shutil.move(prev_path, new_path)
+        self.initUI()
 
 
     def setWorkDir(self):
@@ -76,16 +88,47 @@ class MyApp(QMainWindow):
         f.sort()
         self.work_files = f
         self.target = 0
+        self.emotions = dict()
 
 
     def setButtons(self):
         prev_btn = QPushButton('prev', self)
+        prev_btn.clicked.connect(self.handlePrevBtn)
         next_btn = QPushButton('next', self)
         next_btn.clicked.connect(self.handleNextBtn)
+        save_btn = QPushButton('save', self)
+        save_btn.clicked.connect(self.handleSaveBtn)
+
 
         self.layout.addWidget(prev_btn)
         self.layout.addWidget(next_btn)
+        self.layout.addWidget(save_btn)
 
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+        elif e.key() == Qt.Key_Q:
+            # happy
+            self.emotions[self.work_files[self.target]] = 'happy'
+            self.showImg()
+        elif e.key() == Qt.Key_W:
+            # sad
+            self.emotions[self.work_files[self.target]] = 'sad'
+            self.showImg()
+        elif e.key() == Qt.Key_E:
+            # else
+            self.emotions[self.work_files[self.target]] = 'else'
+            self.showImg()
+        elif e.key() == Qt.Key_D:
+            # delete label
+            del self.emotions[self.work_files[self.target]]
+            print(self.emotions)
+            self.showImg()
+        elif e.key() == Qt.Key_Right:
+            self.handleNextBtn()
+        elif e.key() == Qt.Key_Left:
+            self.handlePrevBtn()
 
     def showImg(self):
         print(self.work_dir+'/'+self.work_files[self.target])
@@ -94,7 +137,9 @@ class MyApp(QMainWindow):
         lbl_img = QLabel()
         lbl_img.setPixmap(pixmap)
         lbl_img.setAlignment(Qt.AlignCenter)
-        lbl_info = QLabel(self.work_files[self.target])
+        filename = self.work_files[self.target]
+        emotion = self.emotions[filename] if filename in self.emotions else ''
+        lbl_info = QLabel(filename+'\n'+emotion)
         lbl_info.setAlignment(Qt.AlignCenter)
         
         if hasattr(self, 'lbl_img'):
